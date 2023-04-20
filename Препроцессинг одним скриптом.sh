@@ -34,31 +34,7 @@ cp  ../3_Blastn_annotation/UCE_in_Trinity.outfmt6 UCE_in_Trinity.outfmt6
 cp  ../2_Trinity_de_novo/Trinity.fasta Trinity.fasta
 mkdir output
 cd output
-script=`cat <<_EOF_
-refs = {}
-with open('../UCE_in_Trinity.outfmt6', 'r') as file:
-    for line in file:
-        refs[line[line.find('\t') + 1:line.find('\t',line.find('\t')+1)]] = line[:line.find('\t')]
-
-with open('../Trinity.fasta', 'r') as trin:
-    with open('../Trinity_copy.fasta', 'w') as trin1:
-        for line in trin:
-            if not line.startswith('>'):
-                trin1.write(line.replace('\n',''))
-            else:
-                trin1.write('\n' + line.replace('\n', '\t'))
-                
-for value, key in refs.items():
-    with open('{0:s}.fasta'.format(key), 'a') as out:
-        with open('../Trinity_copy.fasta', 'r') as trin:
-            for i, line in enumerate(trin):
-                if value in line:
-                    try:
-                        out.write('>' + str(i) + ' contig ' + key + '\n' + line[line.find('\t') +1:])
-                    except IndexError:
-                        continue
-_EOF_`
-echo "$script" | python
+python ../../4.py
 cd ../../
 
 # 5. Кластеризация в CD-HIT-EST
@@ -79,34 +55,7 @@ cp -r  5_CD_HIT_clasterization/ 6_preparing_CAP3
 cd 6_preparing_CAP3
 mkdir output
 cd output
-script=`cat <<_EOF_
-UCE_pull = [i for i in range(1, 1500)]
-for uce_num in UCE_pull:
-
-    try:
-        seq_num = {}
-        with open('../cluster_uce-{0:s}.fasta.clstr'.format(str(uce_num)), 'r') as clstr:
-            for line in clstr:
-                if line.startswith('>'):
-                    cluster_num = line[1:].replace('\n','').replace(' ', '_')
-                if not line.startswith('>'):
-                    seq_num[(line[line.find('>') + 1: line.find('.')])] = cluster_num
-    except: FileNotFoundError
-    
-    try: 
-        with open('../uce-{0:s}.fasta'.format(str(uce_num)), 'r') as uce:
-            line1 = uce.readline()
-            for key, value in seq_num.items():
-                with open('{0:s}'.format('uce-{0:s}_'.format(str(uce_num)) + value + '.fasta'), 'a') as out:
-                    if line1.startswith('>'):
-                        if line1[1:line1.find(' ')] in seq_num.keys():
-                            out.write(line1)
-                            line1 = uce.readline()
-                            out.write(line1)
-                            line1 = uce.readline()     
-    except: FileNotFoundError
-_EOF_`
-echo "$script" | python
+python ../../6.py
 cd ../../
 
 # 7. CAP3. Сборка псевдореференсев
@@ -120,144 +69,7 @@ for i in ../*.fasta;
 do
 cap3 $i -p 75 -f 1500 -e 500 -z 1 -o 100 -s 500
 done
-script=`cat <<_EOF_
-UCE_pull = [i for i in range(1, 1500)]
-for uce_num in UCE_pull:
-    try:
-        with open('../uce-{0:s}_Cluster_0.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_0_copy.fasta.cap.contigs'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-     
-    try:
-        with open('../uce-{0:s}_Cluster_1.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_1_copy.fasta.cap.contigs'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-    
-    try:
-        with open('../uce-{0:s}_Cluster_2.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_2_copy.fasta.cap.contigs'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-    
-    
-    try:
-        with open('../uce-{0:s}_Cluster_0.fasta.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_0_copy.fasta.cap.singlets'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-     
-    try:
-        with open('../uce-{0:s}_Cluster_1.fasta.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_1_copy.fasta.cap.singlets'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-    
-    try:
-        with open('../uce-{0:s}_Cluster_2.fasta.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-            with open('../uce-{0:s}_Cluster_2_copy.fasta.cap.singlets'.format(str(uce_num)), 'w') as contig1:
-                for line in contig:
-                    if not line.startswith('>'):
-                        contig1.write(line.replace('\n',''))
-                    else:
-                        contig1.write('\n' + line)
-                contig1.write('\n')
-    except: FileNotFoundError
-with open('All_refs.fasta', 'a') as ref:
-    for uce_num in UCE_pull:
-        try:
-            with open('../uce-{0:s}_Cluster_0_copy.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                line = contig.readline()
-                line = contig.readline()
-                if line.startswith('>'): # проверка на пустой файл
-                    while line: 
-                        if line.startswith('>'): # проверка на названия контига
-                            ref.writelines('> UCE{0:s}_Claster_0_'.format(str(uce_num)) + line[1:]) # записываем название контига и его uce
-                            line = contig.readline()
-                            ref.writelines(line)
-                            line = contig.readline()
-                else:
-                    with open('../uce-{0:s}_Cluster_0_copy.fasta.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                        line = contig.readline()
-                        if line.startswith('>'): # проверка на пустой файл
-                            ref.writelines('> UCE{0:s}_Claster_0 \n'.format(str(uce_num))) # записываем название контига и его uce
-                            while line:
-                                line = contig.readline()
-                                ref.writelines(line)
-                      
-        except: FileNotFoundError
-        
-        try:
-            with open('../uce-{0:s}_Cluster_1_copy.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                line = contig.readline()
-                line = contig.readline()
-                if line.startswith('>'): # проверка на пустой файл
-                    while line: 
-                        if line.startswith('>'): # проверка на названия контига
-                            ref.writelines('> UCE{0:s}_Claster_1_'.format(str(uce_num)) + line[1:]) # записываем название контига и его uce
-                            line = contig.readline()
-                            ref.writelines(line)
-                            line = contig.readline()
-                else:
-                    with open('../uce-{0:s}_Cluster_1_copy.fasta.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                        line = contig.readline()
-                        if line.startswith('>'): # проверка на пустой файл
-                            ref.writelines('> UCE{0:s}_Claster_1 \n'.format(str(uce_num))) # записываем название контига и его uce
-                            while line:
-                                line = contig.readline()
-                                ref.writelines(line)
-                      
-        except: FileNotFoundError
-        
-        try:
-            with open('../uce-{0:s}_Cluster_2_copy.fasta.cap.contigs'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                line = contig.readline()
-                line = contig.readline()
-                if line.startswith('>'): # проверка на пустой файл
-                    while line: 
-                        if line.startswith('>'): # проверка на названия контига
-                            ref.writelines('> UCE{0:s}_Claster_2_'.format(str(uce_num)) + line[1:]) # записываем название контига и его uce
-                            line = contig.readline()
-                            ref.writelines(line)
-                            line = contig.readline()
-                else:
-                    with open('../uce-{0:s}_Cluster_2.fasta_copy.cap.singlets'.format(str(uce_num)), 'r') as contig: # переписать для всех файлов
-                        line = contig.readline()
-                        if line.startswith('>'): # проверка на пустой файл
-                            ref.writelines('> UCE{0:s}_Claster_2 \n'.format(str(uce_num))) # записываем название контига и его uce
-                            while line:
-                                line = contig.readline()
-                                ref.writelines(line)
-                      
-        except: FileNotFoundError
-_EOF_`
-echo "$script" | python
+python ../../7.py
 cd ../../
 
 # 8. Выравнивание в BWA
@@ -276,12 +88,17 @@ done
 # Вход: Sam - файлы
 # Выход: отфильтрованные sam файлы для дальнейшей обработки, bam файлы для визуализации
 cp -r 8_BWA_alignment/output/ 9_SAMtools_filter
+cp  8_BWA_alignment/All_refs.fasta 9_SAMtools_filter/All_refs.fasta
 cd 9_SAMtools_filter
 for i in *.sam;
 do
 samtools view -F 4 $i -o cart_$i # для парсинга и чистки ридов
-samtools sort $i -o $i.bam
-samtools index $i.bam
+samtools view -F 4 -h $i -o HEADER_cart_$i # для парсинга и чистки ридов (с заголовком)
+
+python ../9.py
+
+samtools sort Clear_cart_$i -o Clear_$i.bam
+samtools index Clear_$i.bam
 done
 
 
