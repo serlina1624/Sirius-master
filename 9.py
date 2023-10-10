@@ -17,14 +17,18 @@ class CIGAR(object):
         self.read = read
         
     def Ref(self): # Подгрузим соответствующий референс в виде списка букв
-        with open('All_refs.fasta', 'r') as refs:
+         with open('All_refs.fasta', 'r') as refs:
             line = refs.readline()
+            ref_all = []
             while line:
                 if self.ref_name in line: # Если название референса из атрибутов совпадает с названием строки в фаста файле с референсами, следующую строку записываем как референс
                     line = refs.readline()
-                    ref = list(line)
-                line = refs.readline()
-        return ref
+                    while not line.startswith(">"):
+                        ref = list(line)[:-1]
+                        ref_all = ref_all + ref
+                        line = refs.readline()
+                line = refs.readline()  
+         return ref_all
     
     def ReadySeq(self):
         '''For input the self object, for output the seq is ready for comparing with reference'''
@@ -80,6 +84,7 @@ class CIGAR(object):
         new_seq = (self.start-1) * ' ' + seq #Тут может быть ошибка, мб не надо -1
 
         return new_seq
+        
 def RefCover(refs, reads):
     '''Делает словарь покрытий по конкретному референсу и сборке.
     На вход: Референс по буквам и Список ридов, 
@@ -87,32 +92,32 @@ def RefCover(refs, reads):
     ref_cover_list = [] # большой словарь для всех нуклеотидов, по всей длине референса
     for i in range(len(refs) + 1):
         cover_dict = {} # для каждого нуклеотида
-        cover_dict['A, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['C, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['G, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['T, нуклеотид № {0:.0f}'.format(i+1)] = 0
+        cover_dict['A'] = 0
+        cover_dict['C'] = 0
+        cover_dict['G'] = 0
+        cover_dict['T']= 0
         ref_cover_list.append(cover_dict)
 
     for read in reads:
         for nucl_number, nucl in enumerate(read):
                 #print(nucl, nucl_number)
                 if nucl == 'A':
-                    ref_cover_list[nucl_number]['A, нуклеотид № {0:.0f}'.format(nucl_number + 1)]  += 1
+                    ref_cover_list[nucl_number]['A']  += 1
                 if nucl == 'T':
-                    ref_cover_list[nucl_number]['T, нуклеотид № {0:.0f}'.format(nucl_number + 1)]  += 1
+                    ref_cover_list[nucl_number]['T']  += 1
                 if nucl == 'G':
-                    ref_cover_list[nucl_number]['G, нуклеотид № {0:.0f}'.format(nucl_number + 1)]  += 1
+                    ref_cover_list[nucl_number]['G']  += 1
                 if nucl == 'C':
-                    ref_cover_list[nucl_number]['C, нуклеотид № {0:.0f}'.format(nucl_number + 1)]  += 1
+                    ref_cover_list[nucl_number]['C']  += 1
 
     # посчитаем покрытие для каждого нуклеотида
     cover_list = [] # большой словарь для всех нуклеотидов, по всей длине референса
     for i in range(len(refs) + 1):
         cover_dict = {} # для каждого нуклеотида
-        cover_dict['A, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['C, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['G, нуклеотид № {0:.0f}'.format(i+1)] = 0
-        cover_dict['T, нуклеотид № {0:.0f}'.format(i+1)] = 0
+        cover_dict['A'] = 0
+        cover_dict['C'] = 0
+        cover_dict['G'] = 0
+        cover_dict['T'] = 0
         cover_list.append(cover_dict)
 
 
@@ -122,28 +127,29 @@ def RefCover(refs, reads):
         for key, value in nucl.items():
             cover += value
         for key, value in nucl.items():    
-            if key == 'A, нуклеотид № {:.0f}'.format(nucl_number + 1):
+            if key == 'A':
                 if cover == 0:
                     cover_list[nucl_number][key] =  0
                 else:
                     cover_list[nucl_number][key] =  value * 100 / cover
-            if key == 'T, нуклеотид № {:.0f}'.format(nucl_number + 1):
+            if key == 'T':
                 if cover == 0:
                     cover_list[nucl_number][key] =  0
                 else:
                     cover_list[nucl_number][key] =  value * 100 / cover
-            if key == 'G, нуклеотид № {:.0f}'.format(nucl_number + 1):
+            if key == 'G':
                 if cover == 0:
                     cover_list[nucl_number][key] =  0
                 else:
                     cover_list[nucl_number][key] =  value * 100 / cover
-            if key == 'C, нуклеотид № {:.0f}'.format(nucl_number + 1):
+            if key == 'C':
                 if cover == 0:
                     cover_list[nucl_number][key] =  0
                 else:
                     cover_list[nucl_number][key] =  value * 100 / cover
         cover_abs.append(cover)     
     return cover_list, cover_abs
+    
 def AllChanges(refs, reads, Names):
     '''Смотрим на все существующие замены в этой сборке для этой хромосомы.
         На вход берем референс и риды сборки. На выходе получаем список списков, для каждого рида свой список.
@@ -156,10 +162,11 @@ def AllChanges(refs, reads, Names):
                 if seq[nucl_number] != ' ': # если нуклеотид рида существует в этой позиции
                     if nucl != seq[nucl_number]: # если нуклеотид референса не равен нуклеотиду рида
                         changing.append([Names[seq_number], 
-                                         '{0:s}, нуклеотид № {1:.0f}'.format(seq[nucl_number], nucl_number +1), len(seq.replace(' ', ''))])                 
+                                         '{0:s}'.format(seq[nucl_number], nucl_number +1), len(seq.replace(' ', ''))])                 
             except IndexError:
                 continue
     return changing
+    
 def ReadWithChanges(AllChanges):
     '''Считаем количество ридов с заменами и считаем число замен в риде.
         На вход подаем список списков из функции AllChanges.
@@ -173,14 +180,14 @@ def ReadWithChanges(AllChanges):
         change.append(('{0:s}'.format(read), read_with_change.count(read))) # Считаем сколько раз этот рид встретился в наборе всех замен
     read_with_change = list(set(change)) # Берем сет от этого набора:
     return read_with_change
+    
 def Cleaning(ReadWithChanges, AllChanges, RefCover):
     candidate_for_remove = [] # список кандидатов на удаление
     for read_tuple in ReadWithChanges: # для всех ридов с заменами:
         for i in range(len(AllChanges)): # пройдемся по списку замен
             if read_tuple[0] == AllChanges[i][0]: # если рид с заменой в списке всех изменений, берем его длину
-                if read_tuple[1]*100/AllChanges[i][-1] >= 15: # Более скольки процентов ридов
+                if read_tuple[1]*100/AllChanges[i][-1] >= 10: # Более скольки процентов ридов
                     candidate_for_remove.append(read_tuple)
-                    print(read_tuple[1]*100/AllChanges[i][-1])
 
         # те риды, где есть инсерция и делеция, тоже попадают в список
        # if 'I' in data.loc[data['Название рида'] == read_tuple[1]]['CIGAR'].iloc[0] or 'D' in data.loc[data['Название рида'] == read_tuple[0]]['CIGAR'].iloc[0]:
@@ -196,26 +203,30 @@ def Cleaning(ReadWithChanges, AllChanges, RefCover):
                 for cover_i, cover in enumerate(RefCover[0]): # смотрим словарь покрытия
                     for key, value in cover.items(): # key - тип нуклеотида с заменой и его номер, value - процент покрытия для этого типа замены
                         if key == e[1]: # когда нуклеотид совпадает с нуклеотидом из списка замен
-                            if value * RefCover[1][cover_i] / max(RefCover[1]) < 35: # для скольки процентов ридов характнрна такая замена
+                            if value * RefCover[1][cover_i] / max(RefCover[1]) < 40: # для скольки процентов ридов характнрна такая замена
                                 #print('Процент замен в риде, относительно его длины:', read[1],'\n', 'Информация о риде и замене:',e, '\n','Процент такой замены в целом:',value)
                                 k+=1
         if k !=0:
             count.append((read,k)) # сколько в риде всего замен, и сколько из них "Редкие"
     reads_for_remove = []
     for i in count:
-        if i[1] / i[0][1] > 0.4: #если относительно всех замен рида более 10% из них редкие,
+        if i[1] / i[0][1] > 0.4: #если относительно всех замен рида более 40% из них редкие,
             reads_for_remove.append(i[0][0])
         
     return reads_for_remove
+    
+
+
 
 curpath = os.path.abspath(os.path.curdir) # зафиксируем папку    
 files_sam_list = [x for x in os.listdir(curpath) if x.startswith("cart_")] # endswith - кончается на (можно так сделать для начала)
 
 for sam_file in files_sam_list:
-    with open("Clear_{0:s}".format(sam_file), 'w') as output:
-        with open("HEADER_{0:s}".format(sam_file), "r") as file:
-             while file.readline().startswith("@"):
-                    output.write(file.readline())
+    #with open("Clear_{0:s}".format(sam_file), 'a') as output:
+     #   with open("HEADER_{0:s}".format(sam_file), "r") as file:
+      #      for line in file:
+       #         if line.startswith("@"):
+        #            output.write(line)
     print("Идет обработка файла: ", sam_file)
     data = pd.read_csv(sam_file, sep = '\t',header=None, usecols=[0,3,9,5,1,2], index_col = False)
     data.columns = ['Название рида','Flag','Ref','Начало рида', 'CIGAR','Рид']
@@ -227,24 +238,88 @@ for sam_file in files_sam_list:
         reads = [] # в списке будут лежать риды для этого конкретного референса
         Cigar = []
         Names = []
+        for i in range(len(data['Ref'])):
+            if data['Ref'][i].encode() == ref.encode():
+                reads.append(CIGAR(data.iloc[i][0], data.iloc[i][2], data.iloc[i][3], data.iloc[i][4], data.iloc[i][5]).ReadySeq())
+                refs = CIGAR(data.iloc[i][0], data.iloc[i][2], data.iloc[i][3], data.iloc[i][4], data.iloc[i][5]).Ref() # сам референс по буквам, перенос строки не берем
+                Cigar.append(data.iloc[i][4])
+                Names.append(data.iloc[i][0])
+        print('Очистка сборки на референс: ', ref)
+        bad_reads = Cleaning(ReadWithChanges(AllChanges(refs, reads, Names)), AllChanges(refs, reads, Names), RefCover(refs, reads))
+        good_reads = []
+        for read in Names:
+            if read not in bad_reads:
+                good_reads.append(read + '\t')
+        print("Число плохих ридов",len(bad_reads), ", Число хороших ридов", len(good_reads), " Для референса ", ref, "В виде: ", sam_file)
+        with open("Clear_{0:s}".format(sam_file), 'a') as output:
+            with open(sam_file, "r") as file:
+                for lines in file:
+                    for read in good_reads:
+                        if read in lines:
+                            if ref in lines:
+                                #print(read, lines)
+                                output.write(lines)
+                                
+curpath = os.path.abspath(os.path.curdir) # зафиксируем папку    
+files_sam_list = [x for x in os.listdir(curpath) if x.startswith("Clear_")] # endswith - кончается на (можно так сделать для начала)
+
+for sam_file in files_sam_list:
+    data = pd.read_csv(sam_file, sep = '\t',header=None, usecols=[0,3,9,5,1,2], index_col = False)
+    data.columns = ['Название рида','Flag','Ref','Начало рида', 'CIGAR','Рид']
+    data = data.loc[data['Flag'] != 2048] # чистка по флагам
+    data = data.loc[data['Flag'] != 2064]
+    data = data.reset_index(drop=True)
+    refs_in_sam = set(data["Ref"]) # в sam файле смотрим сколько всего референсов.
+    for ref in refs_in_sam: # открываем один из референсов: (весь алгоритм был расчитан на такую сборку)
+        reads = [] # в списке будут лежать риды для этого конкретного референса
         refs = []
         for i in range(len(data['Ref'])):
             if data['Ref'][i].encode() == ref.encode():
                 reads.append(CIGAR(data.iloc[i][0], data.iloc[i][2], data.iloc[i][3], data.iloc[i][4], data.iloc[i][5]).ReadySeq())
                 refs = CIGAR(data.iloc[i][0], data.iloc[i][2], data.iloc[i][3], data.iloc[i][4], data.iloc[i][5]).Ref()[:-1] # сам референс по буквам, перенос строки не берем
-                Cigar.append(data.iloc[i][4])
-                Names.append(data.iloc[i][0])
-        print('Очистка сборки на референс: ', ref)
-        bad_reads = Cleaning(ReadWithChanges(AllChanges(refs, reads, Names)), AllChanges(refs, reads, Names), RefCover(refs, reads))
-        #print("Плохие риды ",bad_reads, " Для референса ", ref, "В виде: ", sam_file)
-        good_reads = []
-        for read in Names:
-            if read not in bad_reads:
-                good_reads.append(read + '\t')
+        with open("Seq_by_{0:s}.fasta".format(sam_file), 'a') as output:
+            fragment = ""
+            for nucleotide in RefCover(refs, reads)[0]:
+                if nucleotide['A'] >= 61:
+                    fragment += "A"
+                if nucleotide['C'] >= 61:
+                    fragment += "C"
+                if nucleotide['G'] >= 61:
+                    fragment += "G"
+                if nucleotide['T'] >= 61:
+                    fragment += "T"    
+                if (nucleotide['A'] >= 40) & (nucleotide['A'] <= 60) & (nucleotide['C'] >= 40) & (nucleotide['C'] <= 60): # A C
+                    fragment += "M"
+                if (nucleotide['A'] >= 40) & (nucleotide['A'] <= 60) & (nucleotide['G'] >= 40) & (nucleotide['G'] <= 60): # A G
+                    fragment += "R"
+                if (nucleotide['A'] >= 40) & (nucleotide['A'] <= 60) & (nucleotide['T'] >= 40) & (nucleotide['T'] <= 60): # A T
+                    fragment += "W"
+                if (nucleotide['G'] >= 40) & (nucleotide['G'] <= 60) & (nucleotide['C'] >= 40) & (nucleotide['C'] <= 60): # c G
+                    fragment += "S"
+                if (nucleotide['T'] >= 40) & (nucleotide['T'] <= 60) & (nucleotide['C'] >= 40) & (nucleotide['C'] <= 60): # c t
+                    fragment += "Y"
+                if (nucleotide['T'] >= 40) & (nucleotide['T'] <= 60) & (nucleotide['G'] >= 40) & (nucleotide['G'] <= 60): # T G
+                    fragment += "K"
+                #if (nucleotide['C'] == 0) & (nucleotide['A'] == 0) & (nucleotide['T'] == 0) & (nucleotide['G'] == 0):
+                #    fragment += "N"
+            #print(ref, fragment)
+            output.write(">" + ref + "\n")
+            output.write(fragment + '\n')
+            
+            
+import os 
+curpath = os.path.abspath(os.path.curdir) # зафиксируем папку 
+files_fasta_list = [x for x in os.listdir(curpath) if x.startswith("Seq_")] # список видов
+with open("All_refs.fasta", 'r') as refs:
+    for ref_line in refs:
+        if ref_line.startswith(">"):
+            with open('{0:s}.fasta'.format(ref_line[1:-1]), 'a') as UCE:
+                for spicies in files_fasta_list:
+                    with open(spicies, 'r') as sp:
+                        for line_sp in sp:
+                            if line_sp.startswith(">"):
+                                if line_sp == ref_line:
+                                    UCE.write(ref_line[:-1] + "_Sp_" + spicies[41:44] + "\n")
+                                    UCE.write(sp.readline())
 
-        with open("Clear_{0:s}".format(sam_file), 'a') as output:
-            with open("HEADER_{0:s}".format(sam_file), "r") as file:
-                for lines in file:
-                    for read in good_reads:
-                        if read in file.readline():
-                            output.write(file.readline())
+

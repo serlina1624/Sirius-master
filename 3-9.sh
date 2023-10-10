@@ -1,30 +1,10 @@
 #!/bin/bash
-#!/usr/bin/python
-# 0. Обрезка адаптеров
-# Вход: файлы по видам, fastq
-# Выход: fastq - файлы по видам, с обрезанными адаптерами
-python 1.py
-
-#1. Объединение видов в общий пул
-# Вход: Фаста файлы видов
-# Выход: Единый пул, фаста файл
-cat NonAdapters_IonXpress_*.fastq > All_spicies.fastq
-
-#2. Работа с trinity (без доступа к кластеру работаем с готовым файлом по пяти видам)
-# Вход: единый пул, фаста
-# Выход: Фаста файл с контигами
-mkdir 2_Trinity_de_novo
-#cd 2_Trinity_de_novo
-# ln -s ../All_spicies
-#Trinity --seqType fa --single All_spicies.fasta
-# cd ../
-
 # 3. Аннотация
 # Вход: фаста-файл с контигами, список UCE
 # Выход: outfmt - таблица со списком UCE, и контигов, содержащих их 
 mkdir 3_Blastn_annotation
 cd 3_Blastn_annotation
-cp  ../2_Trinity_de_novo/Trinity.fasta Trinity.fasta
+cp  ../Trinity.fasta Trinity.fasta
 cp ../UCE500_final.fasta UCE500_final.fasta
 makeblastdb -in 'Trinity.fasta' -dbtype nucl -out blast_index
 blastn -query UCE500_final.fasta -db blast_index -outfmt 6 -out UCE_in_Trinity.outfmt6
@@ -36,7 +16,7 @@ cd ../
 mkdir 4_Fasta_with_contigs_with_UCE
 cd 4_Fasta_with_contigs_with_UCE
 cp  ../3_Blastn_annotation/UCE_in_Trinity.outfmt6 UCE_in_Trinity.outfmt6
-cp  ../2_Trinity_de_novo/Trinity.fasta Trinity.fasta
+cp  ../Trinity.fasta Trinity.fasta
 mkdir output
 cd output
 python ../../4.py
@@ -67,6 +47,7 @@ cd ../../
 # Вход: фаста файлы, где в каждом лежат контиги с UCE, файлы разбиты по кластерам
 # Выход: фаста файлы с псевдореверенсами, на которые будет делаться выравнивание
 cp -r  6_preparing_CAP3/output 7_CAP3_assembl
+cp 7.py 7_CAP3_assembl/7.py
 cd 7_CAP3_assembl
 mkdir output
 cd output
@@ -74,8 +55,9 @@ for i in ../*.fasta;
 do
 cap3 $i -p 75 -f 1500 -e 500 -z 1 -o 100 -s 500
 done
-python ../../7.py
-cd ../../
+cd ../
+python 7.py
+cd ../
 
 # 8. Выравнивание в BWA
 # Вход: файл с референсами, риды видов
@@ -84,27 +66,24 @@ mkdir 8_BWA_alignment
 cp  7_CAP3_assembl/output/All_refs.fasta 8_BWA_alignment/All_refs.fasta
 mkdir 8_BWA_alignment/output
 bwa index 8_BWA_alignment/All_refs.fasta
-for i in Ion*.fasta;
+for i in Non_adapters*.fastq;
 do
 bwa mem 8_BWA_alignment/All_refs.fasta $i > 8_BWA_alignment/output/$i.sam
+
 done
 
-# 9. Индексция и фильтрация
-# Вход: Sam - файлы
-# Выход: отфильтрованные sam файлы для дальнейшей обработки, bam файлы для визуализации
-cp -r 8_BWA_alignment/output/ 9_SAMtools_filter
-cp  8_BWA_alignment/All_refs.fasta 9_SAMtools_filter/All_refs.fasta
-cd 9_SAMtools_filter
+# 9. Картирование и фильтрация
+# Вход: картированные Sam - файлы
+# Выход: отфильтрованные sam файлы для дальнейшей обработки, #bam файлы для визуализации
+cp -r 8_BWA_alignment/output/ 9_filter
+cp  8_BWA_alignment/All_refs.fasta 9_filter/All_refs.fasta
+cd 9_filter
 for i in *.sam;
 do
 samtools view -F 4 $i -o cart_$i # для парсинга и чистки ридов
-samtools view -F 4 -h $i -o HEADER_cart_$i # для парсинга и чистки ридов (с заголовком)
-
+done
 python ../9.py
 
-samtools sort Clear_cart_$i -o Clear_$i.bam
-samtools index Clear_$i.bam
-done
 
 
 

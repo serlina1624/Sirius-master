@@ -4,7 +4,7 @@
 # Выход: fastq - файлы по видам, с обрезанными адаптерами
 import os
 curpath = os.path.abspath(os.path.curdir) # зафиксируем папку    
-files_fastq_list = [x for x in os.listdir(curpath) if x.startswith("IonXpress_")] # endswith - кончается на (можно так сделать для начала)
+files_fastq_list = [x for x in os.listdir(curpath) if x.startswith("IonXpress_")] # endswith - кончается на 
 with open ("Barcodes.fasta", 'r') as file:
     for line in file: 
         if line.startswith(">"):
